@@ -1,4 +1,4 @@
-# 📱 Campus Roommate App  
+# 📱 UniHouse(Campus Roommate) App  
 > 대학가 인근 룸메이트·매물 매칭 서비스  
 > *Built with Spring Boot (Backend) & React Native (Mobile App)*
 
