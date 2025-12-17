@@ -58,27 +58,23 @@
 - React Native  
 - TypeScript  
 - React Query  
-- Zustand / Redux (선택)  
-- Expo or Bare Workflow  
 
 ### **Backend**
 - Spring Boot  
 - Spring Security + JWT  
-- Spring WebFlux or MVC  
 - JPA (Hibernate)  
 - WebSocket (STOMP)
 
 ### **Infrastructure**
 - PostgreSQL / MySQL  
-- Redis (세션/캐시/채팅)  
-- AWS S3 (이미지 업로드)  
-- AWS EC2 or Docker  
+- Redis
+- AWS S3 
+- Docker  
 - Firebase Cloud Messaging(FCM)
 
 ---
 
-## 📡 API 구조 (간단 요약)
-> 전체 API 문서는 `/docs/api` 또는 Swagger에서 확인 가능하도록 설정 권장.
+## 📡 API 구조 
 
 | 기능 | 엔드포인트 | 설명 |
 |------|-------------|------|
