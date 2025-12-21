@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -10,12 +10,41 @@ import {
   ScrollView,
   Platform,
   KeyboardAvoidingView,
+  ActivityIndicator,
   Alert,
 } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
+
+import * as WebBrowser from "expo-web-browser";
+import * as Linking from "expo-linking";
+import * as Google from "expo-auth-session/providers/google";
+
+WebBrowser.maybeCompleteAuthSession();
+
+/**
+ * ✅ 중요: app.json(app.config.js)에 아래 추가 필요
+ * {
+ *   "expo": { "scheme": "unihouse" }
+ * }
+ * 변경 후 앱 재시작 필수
+ */
+
+/** -----------------------------
+ *  🔧 환경설정 값
+ *  ----------------------------- */
+// 🔧 Kakao Developers에서 REST API KEY
+const KAKAO_REST_API_KEY = "🔧KAKAO_REST_API_KEY";
+
+// 🔧 Google Cloud OAuth Client ID들
+// - Expo Go로 테스트: 보통 expoClientId만으로도 동작하지만,
+// - EAS 빌드/스토어 배포까지 가면 iosClientId/androidClientId도 넣는게 안전함.
+const GOOGLE_EXPO_CLIENT_ID = "🔧GOOGLE_EXPO_CLIENT_ID"; // 권장(Expo 환경용)
+const GOOGLE_IOS_CLIENT_ID = "🔧GOOGLE_IOS_CLIENT_ID"; // 선택(나중에 iOS 빌드)
+const GOOGLE_ANDROID_CLIENT_ID = "🔧GOOGLE_ANDROID_CLIENT_ID"; // 선택(나중에 Android 빌드)
+const GOOGLE_WEB_CLIENT_ID = "🔧GOOGLE_WEB_CLIENT_ID"; // 선택(웹 지원 시)
 
 /** -----------------------------
  *  Mock Data
@@ -59,16 +88,32 @@ const HomeStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 /** -----------------------------
- *  Login Screen (디자인 버전)
+ *  Login Screen (구글/카카오 버튼 props 연결)
  *  ----------------------------- */
-const LoginScreen = ({ navigation, onEmailLogin, onGoogleLogin, onKakaoLogin }) => {
+const LoginScreen = ({
+  navigation,
+  onEmailLogin,
+  onGoogleLogin,
+  onKakaoLogin,
+}) => {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const canSubmit = useMemo(
-    () => email.trim().length > 0 && pw.trim().length >= 4,
-    [email, pw]
+    () => email.trim().length > 0 && pw.trim().length >= 4 && !loading,
+    [email, pw, loading]
   );
+
+  const run = async (fn) => {
+    if (!fn) return;
+    try {
+      setLoading(true);
+      await fn();
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -85,7 +130,6 @@ const LoginScreen = ({ navigation, onEmailLogin, onGoogleLogin, onKakaoLogin }) 
         </View>
         <Text style={styles.tagline}>대학생 룸메이트 매칭 플랫폼</Text>
 
-        {/* 입력 폼 */}
         <View style={styles.formWrap}>
           <View style={styles.inputRow}>
             <Ionicons name="mail-outline" size={20} color="#64748b" />
@@ -97,6 +141,7 @@ const LoginScreen = ({ navigation, onEmailLogin, onGoogleLogin, onKakaoLogin }) 
               keyboardType="email-address"
               value={email}
               onChangeText={setEmail}
+              editable={!loading}
             />
           </View>
 
@@ -109,31 +154,39 @@ const LoginScreen = ({ navigation, onEmailLogin, onGoogleLogin, onKakaoLogin }) 
               secureTextEntry
               value={pw}
               onChangeText={setPw}
+              editable={!loading}
             />
           </View>
 
-          {/* 로그인 버튼 */}
+          {/* 이메일 로그인 (임시) */}
           <TouchableOpacity
             style={[styles.primaryBtn, !canSubmit && styles.btnDisabled]}
             disabled={!canSubmit}
-            onPress={() => onEmailLogin?.({ email, password: pw })}
+            onPress={() =>
+              run(() => onEmailLogin?.({ email, password: pw }))
+            }
             activeOpacity={0.9}
           >
-            <Text style={styles.primaryBtnText}>로그인</Text>
+            {loading ? (
+              <ActivityIndicator />
+            ) : (
+              <Text style={styles.primaryBtnText}>로그인</Text>
+            )}
           </TouchableOpacity>
 
-          {/* 구분선 */}
+          {/* Divider */}
           <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>또는</Text>
             <View style={styles.dividerLine} />
           </View>
 
-          {/* 구글 로그인 */}
+          {/* Google */}
           <TouchableOpacity
-            style={styles.googleBtn}
-            onPress={() => onGoogleLogin?.()}
+            style={[styles.googleBtn, loading && styles.btnDisabled]}
+            onPress={() => run(onGoogleLogin)}
             activeOpacity={0.9}
+            disabled={loading}
           >
             <View style={styles.googleIconCircle}>
               <Text style={styles.googleG}>G</Text>
@@ -141,11 +194,12 @@ const LoginScreen = ({ navigation, onEmailLogin, onGoogleLogin, onKakaoLogin }) 
             <Text style={styles.googleBtnText}>구글로 로그인</Text>
           </TouchableOpacity>
 
-          {/* 카카오 로그인 */}
+          {/* Kakao */}
           <TouchableOpacity
-            style={styles.kakaoBtn}
-            onPress={() => onKakaoLogin?.()}
+            style={[styles.kakaoBtn, loading && styles.btnDisabled]}
+            onPress={() => run(onKakaoLogin)}
             activeOpacity={0.9}
+            disabled={loading}
           >
             <View style={styles.kakaoBubble}>
               <Text style={styles.kakaoTalk}>Talk</Text>
@@ -153,16 +207,19 @@ const LoginScreen = ({ navigation, onEmailLogin, onGoogleLogin, onKakaoLogin }) 
             <Text style={styles.kakaoBtnText}>카카오톡으로 로그인</Text>
           </TouchableOpacity>
 
-          {/* 회원가입 */}
+          {/* 회원가입 이동(일단 화면만) */}
           <View style={styles.bottomRow}>
             <Text style={styles.bottomText}>계정이 없으신가요?</Text>
-            <TouchableOpacity onPress={() => navigation.navigate("SignUp")}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("SignUp")}
+              disabled={loading}
+            >
               <Text style={styles.bottomLink}> 회원가입</Text>
             </TouchableOpacity>
           </View>
 
           <Text style={styles.authNotice}>
-            * 현재는 UI 테스트용이다. 백엔드 붙이면 실제 로그인으로 바꾸면 됨.
+            * 소셜 로그인 성공 시 임시로 로그인 처리한다. 다음 단계에서 백엔드 JWT로 연결하면 됨.
           </Text>
         </View>
       </KeyboardAvoidingView>
@@ -171,7 +228,7 @@ const LoginScreen = ({ navigation, onEmailLogin, onGoogleLogin, onKakaoLogin }) 
 };
 
 /** -----------------------------
- *  SignUp Screen (간단 버전)
+ *  SignUp Screen (간단)
  *  ----------------------------- */
 const SignUpScreen = ({ navigation, onSignUp }) => {
   const [name, setName] = useState("");
@@ -181,11 +238,7 @@ const SignUpScreen = ({ navigation, onSignUp }) => {
 
   const pwOk = pw.trim().length >= 6;
   const matchOk = pw === pw2 && pw2.length > 0;
-
-  const canSubmit = useMemo(
-    () => name.trim().length > 0 && email.trim().length > 0 && pwOk && matchOk,
-    [name, email, pwOk, matchOk]
-  );
+  const canSubmit = name.trim() && email.trim() && pwOk && matchOk;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -266,16 +319,19 @@ const SignUpScreen = ({ navigation, onSignUp }) => {
   );
 };
 
-const AuthNavigator = ({ onLogin }) => {
+/** -----------------------------
+ *  Auth Navigator
+ *  ----------------------------- */
+const AuthNavigator = ({ onLogin, onGoogleLogin, onKakaoLogin }) => {
   return (
     <AuthStack.Navigator>
       <AuthStack.Screen name="Login" options={{ headerShown: false }}>
         {(props) => (
           <LoginScreen
             {...props}
-            onEmailLogin={({ email }) => onLogin({ email })}
-            onGoogleLogin={() => Alert.alert("Google 로그인", "TODO: Google OAuth 연결")}
-            onKakaoLogin={() => Alert.alert("Kakao 로그인", "TODO: Kakao OAuth 연결")}
+            onEmailLogin={({ email }) => onLogin({ provider: "email", email })}
+            onGoogleLogin={onGoogleLogin}
+            onKakaoLogin={onKakaoLogin}
           />
         )}
       </AuthStack.Screen>
@@ -288,6 +344,27 @@ const AuthNavigator = ({ onLogin }) => {
 };
 
 /** -----------------------------
+ *  Kakao OAuth helper (OAuth + 딥링크)
+ *  ----------------------------- */
+async function startKakaoLogin() {
+  const redirectUri = Linking.createURL("oauth"); // unihouse://oauth
+  const authUrl =
+    "https://kauth.kakao.com/oauth/authorize" +
+    "?response_type=code" +
+    `&client_id=${KAKAO_REST_API_KEY}` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}`;
+
+  const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+
+  if (result.type === "success" && result.url) {
+    const parsed = Linking.parse(result.url);
+    const code = parsed.queryParams?.code;
+    if (code) return code;
+  }
+  return null;
+}
+
+/** -----------------------------
  *  Main Screens
  *  ----------------------------- */
 const HomeScreen = ({ navigation }) => {
@@ -297,7 +374,6 @@ const HomeScreen = ({ navigation }) => {
   const handleSearch = (text) => {
     setKeyword(text);
     if (!text) return setFiltered(MOCK_LISTINGS);
-
     const lower = text.toLowerCase();
     setFiltered(
       MOCK_LISTINGS.filter(
@@ -325,7 +401,7 @@ const HomeScreen = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: "#f9fafb" }]}>
       <View style={styles.screenContainer}>
         <Text style={styles.screenTitle}>매물 게시판</Text>
 
@@ -353,7 +429,7 @@ const ListingDetailScreen = ({ route }) => {
   const { listing } = route.params;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: "#f9fafb" }]}>
       <ScrollView style={styles.screenContainer}>
         <Text style={styles.detailTitle}>{listing.title}</Text>
 
@@ -400,7 +476,7 @@ const CreateListingScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: "#f9fafb" }]}>
       <ScrollView style={styles.screenContainer}>
         <Text style={styles.screenTitle}>룸메 모집글 작성</Text>
 
@@ -465,14 +541,19 @@ const CreateListingScreen = () => {
 
 const MyPageScreen = ({ onLogout, user }) => {
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: "#f9fafb" }]}>
       <View style={styles.screenContainer}>
         <Text style={styles.screenTitle}>마이페이지</Text>
 
         <View style={styles.detailBox}>
           <Text style={styles.detailRow}>
-            로그인: <Text style={styles.detailValue}>{user?.email}</Text>
+            provider: <Text style={styles.detailValue}>{user?.provider}</Text>
           </Text>
+          {user?.email ? (
+            <Text style={styles.detailRow}>
+              email: <Text style={styles.detailValue}>{user.email}</Text>
+            </Text>
+          ) : null}
         </View>
 
         <TouchableOpacity
@@ -517,10 +598,34 @@ const TabNavigator = ({ onLogout, user }) => (
 );
 
 /** -----------------------------
- *  App Root
+ *  App Root (Google AuthSession + Kakao OAuth 연결 완료)
  *  ----------------------------- */
 export default function App() {
   const [user, setUser] = useState(null);
+
+  // ✅ Google AuthSession
+  const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
+    expoClientId: GOOGLE_EXPO_CLIENT_ID,
+    iosClientId: GOOGLE_IOS_CLIENT_ID,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    scopes: ["profile", "email"],
+  });
+
+  // Google 로그인 성공 처리
+  useEffect(() => {
+    if (googleResponse?.type === "success") {
+      const { authentication } = googleResponse;
+      const accessToken = authentication?.accessToken;
+
+      // 🔧 여기서 백엔드 연결 시:
+      // POST /auth/google { accessToken } -> JWT 발급
+      setUser({
+        provider: "google",
+        accessToken,
+      });
+    }
+  }, [googleResponse]);
 
   const auth = useMemo(
     () => ({
@@ -529,6 +634,29 @@ export default function App() {
     }),
     []
   );
+
+  const handleGoogleLogin = async () => {
+    if (!googleRequest) {
+      Alert.alert("Google 로그인", "요청 객체가 준비되지 않았습니다. 잠시 후 다시 시도하세요.");
+      return;
+    }
+    await googlePromptAsync();
+  };
+
+  const handleKakaoLogin = async () => {
+    const code = await startKakaoLogin();
+    if (!code) {
+      Alert.alert("Kakao 로그인", "로그인이 취소되었거나 실패했습니다.");
+      return;
+    }
+
+    // 🔧 여기서 백엔드 연결 시:
+    // POST /auth/kakao { code } -> JWT 발급
+    setUser({
+      provider: "kakao",
+      code,
+    });
+  };
 
   return (
     <NavigationContainer>
@@ -539,7 +667,13 @@ export default function App() {
           </RootStack.Screen>
         ) : (
           <RootStack.Screen name="Auth">
-            {() => <AuthNavigator onLogin={auth.login} />}
+            {() => (
+              <AuthNavigator
+                onLogin={auth.login}
+                onGoogleLogin={handleGoogleLogin}
+                onKakaoLogin={handleKakaoLogin}
+              />
+            )}
           </RootStack.Screen>
         )}
       </RootStack.Navigator>
@@ -553,7 +687,7 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#ffffff" },
 
-  // Login design
+  // Login
   loginContainer: {
     flex: 1,
     paddingHorizontal: 18,
@@ -647,10 +781,9 @@ const styles = StyleSheet.create({
   bottomRow: { marginTop: 22, flexDirection: "row", justifyContent: "center" },
   bottomText: { color: "#64748b", fontSize: 14 },
   bottomLink: { color: "#F59E0B", fontWeight: "900", fontSize: 14 },
-
   authNotice: { fontSize: 12, color: "#9ca3af", textAlign: "center", marginTop: 12 },
 
-  // SignUp layout
+  // SignUp
   authContainer: {
     flexGrow: 1,
     paddingHorizontal: 16,
@@ -680,7 +813,7 @@ const styles = StyleSheet.create({
   },
   warnText: { marginTop: 6, color: "#ef4444", fontSize: 12 },
 
-  // Main screens
+  // Main
   screenContainer: { flex: 1, paddingHorizontal: 16, paddingTop: 12, backgroundColor: "#f9fafb" },
   screenTitle: { fontSize: 22, fontWeight: "700", marginBottom: 12, color: "#111827" },
   searchContainer: { marginBottom: 12 },
