@@ -8,19 +8,19 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 /**
- * UniHouse 로그인 화면 (이메일/비번 + 구글/카카오)
- *
  * props:
- * - onEmailLogin: ({ email, password }) => void
- * - onGoogleLogin: () => void
- * - onKakaoLogin: () => void
+ * - onEmailLogin: ({ email, password }) => Promise<void> | void
+ * - onGoogleLogin: () => Promise<void> | void
+ * - onKakaoLogin: () => Promise<void> | void
  * - onGoSignUp: () => void
  */
 export default function LoginScreen({
+  navigation, // (Stack에서 넘기는 경우)
   onEmailLogin,
   onGoogleLogin,
   onKakaoLogin,
@@ -28,11 +28,22 @@ export default function LoginScreen({
 }) {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const canSubmit = useMemo(
-    () => email.trim().length > 0 && pw.trim().length >= 4,
-    [email, pw]
+    () => email.trim().length > 0 && pw.trim().length >= 4 && !loading,
+    [email, pw, loading]
   );
+
+  const run = async (fn) => {
+    if (!fn) return;
+    try {
+      setLoading(true);
+      await fn();
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -40,7 +51,7 @@ export default function LoginScreen({
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        {/* Logo 영역 */}
+        {/* Logo */}
         <View style={styles.logoWrap}>
           <View style={styles.logoIcon}>
             <Ionicons name="home" size={22} color="#ffffff" />
@@ -61,6 +72,7 @@ export default function LoginScreen({
               keyboardType="email-address"
               value={email}
               onChangeText={setEmail}
+              editable={!loading}
             />
           </View>
 
@@ -73,17 +85,24 @@ export default function LoginScreen({
               secureTextEntry
               value={pw}
               onChangeText={setPw}
+              editable={!loading}
             />
           </View>
 
-          {/* 로그인 버튼 */}
+          {/* 이메일 로그인 */}
           <TouchableOpacity
             style={[styles.primaryBtn, !canSubmit && styles.btnDisabled]}
             disabled={!canSubmit}
-            onPress={() => onEmailLogin?.({ email, password: pw })}
+            onPress={() =>
+              run(() => onEmailLogin?.({ email, password: pw }))
+            }
             activeOpacity={0.9}
           >
-            <Text style={styles.primaryBtnText}>로그인</Text>
+            {loading ? (
+              <ActivityIndicator />
+            ) : (
+              <Text style={styles.primaryBtnText}>로그인</Text>
+            )}
           </TouchableOpacity>
 
           {/* Divider */}
@@ -95,9 +114,10 @@ export default function LoginScreen({
 
           {/* Google */}
           <TouchableOpacity
-            style={styles.googleBtn}
-            onPress={() => onGoogleLogin?.()}
+            style={[styles.googleBtn, loading && styles.btnDisabled]}
+            onPress={() => run(onGoogleLogin)}
             activeOpacity={0.9}
+            disabled={loading}
           >
             <View style={styles.googleIconCircle}>
               <Text style={styles.googleG}>G</Text>
@@ -107,9 +127,10 @@ export default function LoginScreen({
 
           {/* Kakao */}
           <TouchableOpacity
-            style={styles.kakaoBtn}
-            onPress={() => onKakaoLogin?.()}
+            style={[styles.kakaoBtn, loading && styles.btnDisabled]}
+            onPress={() => run(onKakaoLogin)}
             activeOpacity={0.9}
+            disabled={loading}
           >
             <View style={styles.kakaoBubble}>
               <Text style={styles.kakaoTalk}>Talk</Text>
@@ -119,11 +140,21 @@ export default function LoginScreen({
 
           {/* Sign up */}
           <View style={styles.bottomRow}>
-            <Text style={styles.bottomText}>계정이 없으신가?</Text>
-            <TouchableOpacity onPress={() => onGoSignUp?.()}>
+            <Text style={styles.bottomText}>계정이 없으신가요?</Text>
+            <TouchableOpacity
+              onPress={() => {
+                if (onGoSignUp) onGoSignUp();
+                else navigation?.navigate?.("SignUp");
+              }}
+              disabled={loading}
+            >
               <Text style={styles.bottomLink}> 회원가입</Text>
             </TouchableOpacity>
           </View>
+
+          <Text style={styles.authNotice}>
+            * 구글/카카오 로그인은 버튼 클릭 시 OAuth를 시작하도록 연결하면 됨.
+          </Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -245,4 +276,11 @@ const styles = StyleSheet.create({
   },
   bottomText: { color: "#64748b", fontSize: 14 },
   bottomLink: { color: "#F59E0B", fontWeight: "900", fontSize: 14 },
+
+  authNotice: {
+    fontSize: 12,
+    color: "#9ca3af",
+    textAlign: "center",
+    marginTop: 12,
+  },
 });
