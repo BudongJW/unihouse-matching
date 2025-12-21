@@ -8,7 +8,7 @@
 
 ## 🏡 소개 (Overview)
 
-**Campus Roommate App**은 대학생들이 학교 인근에서  
+**UniHouse App**은 대학생들이 학교 인근에서  
 ✔ 안전하고  
 ✔ 검증된 매물 기반으로  
 ✔ 룸메이트를 쉽게 찾을 수 있도록  
