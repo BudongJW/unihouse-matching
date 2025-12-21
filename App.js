@@ -10,10 +10,12 @@ import {
   ScrollView,
   Platform,
   KeyboardAvoidingView,
+  Alert,
 } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
 
 /** -----------------------------
  *  Mock Data
@@ -57,19 +59,133 @@ const HomeStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 /** -----------------------------
- *  Auth Screens
+ *  Login Screen (디자인 버전)
  *  ----------------------------- */
-const LoginScreen = ({ navigation, onLogin }) => {
+const LoginScreen = ({ navigation, onEmailLogin, onGoogleLogin, onKakaoLogin }) => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [pw, setPw] = useState("");
 
-  const canSubmit = email.trim().length > 0 && password.trim().length >= 4;
+  const canSubmit = useMemo(
+    () => email.trim().length > 0 && pw.trim().length >= 4,
+    [email, pw]
+  );
 
-  const handleLogin = () => {
-    // TODO: 백엔드 연동 (POST /auth/login) 후 JWT 저장
-    // 지금은 임시로 성공 처리
-    onLogin({ email });
-  };
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.loginContainer}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        {/* 로고 */}
+        <View style={styles.logoWrap}>
+          <View style={styles.logoIcon}>
+            <Ionicons name="home" size={22} color="#ffffff" />
+          </View>
+          <Text style={styles.logoText}>UniHouse</Text>
+        </View>
+        <Text style={styles.tagline}>대학생 룸메이트 매칭 플랫폼</Text>
+
+        {/* 입력 폼 */}
+        <View style={styles.formWrap}>
+          <View style={styles.inputRow}>
+            <Ionicons name="mail-outline" size={20} color="#64748b" />
+            <TextInput
+              style={styles.input}
+              placeholder="이메일"
+              placeholderTextColor="#94a3b8"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              value={email}
+              onChangeText={setEmail}
+            />
+          </View>
+
+          <View style={[styles.inputRow, { marginTop: 12 }]}>
+            <Ionicons name="lock-closed-outline" size={20} color="#64748b" />
+            <TextInput
+              style={styles.input}
+              placeholder="비밀번호"
+              placeholderTextColor="#94a3b8"
+              secureTextEntry
+              value={pw}
+              onChangeText={setPw}
+            />
+          </View>
+
+          {/* 로그인 버튼 */}
+          <TouchableOpacity
+            style={[styles.primaryBtn, !canSubmit && styles.btnDisabled]}
+            disabled={!canSubmit}
+            onPress={() => onEmailLogin?.({ email, password: pw })}
+            activeOpacity={0.9}
+          >
+            <Text style={styles.primaryBtnText}>로그인</Text>
+          </TouchableOpacity>
+
+          {/* 구분선 */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>또는</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* 구글 로그인 */}
+          <TouchableOpacity
+            style={styles.googleBtn}
+            onPress={() => onGoogleLogin?.()}
+            activeOpacity={0.9}
+          >
+            <View style={styles.googleIconCircle}>
+              <Text style={styles.googleG}>G</Text>
+            </View>
+            <Text style={styles.googleBtnText}>구글로 로그인</Text>
+          </TouchableOpacity>
+
+          {/* 카카오 로그인 */}
+          <TouchableOpacity
+            style={styles.kakaoBtn}
+            onPress={() => onKakaoLogin?.()}
+            activeOpacity={0.9}
+          >
+            <View style={styles.kakaoBubble}>
+              <Text style={styles.kakaoTalk}>Talk</Text>
+            </View>
+            <Text style={styles.kakaoBtnText}>카카오톡으로 로그인</Text>
+          </TouchableOpacity>
+
+          {/* 회원가입 */}
+          <View style={styles.bottomRow}>
+            <Text style={styles.bottomText}>계정이 없으신가요?</Text>
+            <TouchableOpacity onPress={() => navigation.navigate("SignUp")}>
+              <Text style={styles.bottomLink}> 회원가입</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.authNotice}>
+            * 현재는 UI 테스트용이다. 백엔드 붙이면 실제 로그인으로 바꾸면 됨.
+          </Text>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+};
+
+/** -----------------------------
+ *  SignUp Screen (간단 버전)
+ *  ----------------------------- */
+const SignUpScreen = ({ navigation, onSignUp }) => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
+
+  const pwOk = pw.trim().length >= 6;
+  const matchOk = pw === pw2 && pw2.length > 0;
+
+  const canSubmit = useMemo(
+    () => name.trim().length > 0 && email.trim().length > 0 && pwOk && matchOk,
+    [name, email, pwOk, matchOk]
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -79,14 +195,20 @@ const LoginScreen = ({ navigation, onLogin }) => {
       >
         <ScrollView contentContainerStyle={styles.authContainer}>
           <Text style={styles.brandTitle}>UniHouse</Text>
-          <Text style={styles.brandSub}>대학가 룸메이트 매칭</Text>
+          <Text style={styles.brandSub}>회원가입</Text>
 
           <View style={styles.authCard}>
-            <Text style={styles.authTitle}>로그인</Text>
+            <Text style={styles.label}>닉네임</Text>
+            <TextInput
+              style={styles.basicInput}
+              placeholder="예) 재원"
+              value={name}
+              onChangeText={setName}
+            />
 
             <Text style={styles.label}>이메일</Text>
             <TextInput
-              style={styles.input}
+              style={styles.basicInput}
               placeholder="example@university.ac.kr"
               autoCapitalize="none"
               keyboardType="email-address"
@@ -96,139 +218,47 @@ const LoginScreen = ({ navigation, onLogin }) => {
 
             <Text style={styles.label}>비밀번호</Text>
             <TextInput
-              style={styles.input}
-              placeholder="비밀번호 (4자 이상)"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
-
-            <TouchableOpacity
-              style={[styles.primaryButton, !canSubmit && styles.buttonDisabled]}
-              onPress={handleLogin}
-              disabled={!canSubmit}
-            >
-              <Text style={styles.primaryButtonText}>로그인</Text>
-            </TouchableOpacity>
-
-            <View style={styles.authFooterRow}>
-              <Text style={styles.mutedText}>계정이 없나?</Text>
-              <TouchableOpacity onPress={() => navigation.navigate("SignUp")}>
-                <Text style={styles.linkText}> 회원가입</Text>
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => alert("TODO: 비밀번호 재설정 화면 연결")}
-              style={{ marginTop: 10 }}
-            >
-              <Text style={styles.mutedLinkText}>비밀번호를 잊었나?</Text>
-            </TouchableOpacity>
-          </View>
-
-          <Text style={styles.authNotice}>
-            * 현재는 UI 시연용 임시 로그인이다. 나중에 Spring JWT로 연결하면 됨.
-          </Text>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
-};
-
-const SignUpScreen = ({ navigation, onSignUp }) => {
-  const [name, setName] = useState("");
-  const [univEmail, setUnivEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [password2, setPassword2] = useState("");
-
-  const passwordOk = password.trim().length >= 6;
-  const matchOk = password === password2 && password2.length > 0;
-
-  const canSubmit =
-    name.trim().length > 0 &&
-    univEmail.trim().length > 0 &&
-    passwordOk &&
-    matchOk;
-
-  const handleSignUp = () => {
-    // TODO: 백엔드 연동 (POST /auth/signup)
-    // 지금은 임시로 가입 성공 → 로그인 상태로 전환
-    onSignUp({ email: univEmail, name });
-  };
-
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <ScrollView contentContainerStyle={styles.authContainer}>
-          <Text style={styles.brandTitle}>UniHouse</Text>
-          <Text style={styles.brandSub}>대학가 룸메이트 매칭</Text>
-
-          <View style={styles.authCard}>
-            <Text style={styles.authTitle}>회원가입</Text>
-
-            <Text style={styles.label}>닉네임</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="예) 재원"
-              value={name}
-              onChangeText={setName}
-            />
-
-            <Text style={styles.label}>학교 이메일</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="example@university.ac.kr"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              value={univEmail}
-              onChangeText={setUnivEmail}
-            />
-
-            <Text style={styles.label}>비밀번호</Text>
-            <TextInput
-              style={styles.input}
+              style={styles.basicInput}
               placeholder="6자 이상"
               secureTextEntry
-              value={password}
-              onChangeText={setPassword}
+              value={pw}
+              onChangeText={setPw}
             />
-            {!passwordOk && password.length > 0 ? (
+            {!pwOk && pw.length > 0 ? (
               <Text style={styles.warnText}>비밀번호는 6자 이상 권장</Text>
             ) : null}
 
             <Text style={styles.label}>비밀번호 확인</Text>
             <TextInput
-              style={styles.input}
+              style={styles.basicInput}
               placeholder="비밀번호 재입력"
               secureTextEntry
-              value={password2}
-              onChangeText={setPassword2}
+              value={pw2}
+              onChangeText={setPw2}
             />
-            {!matchOk && password2.length > 0 ? (
+            {!matchOk && pw2.length > 0 ? (
               <Text style={styles.warnText}>비밀번호가 일치하지 않음</Text>
             ) : null}
 
             <TouchableOpacity
-              style={[styles.primaryButton, !canSubmit && styles.buttonDisabled]}
-              onPress={handleSignUp}
+              style={[styles.primaryBtn, !canSubmit && styles.btnDisabled]}
               disabled={!canSubmit}
+              onPress={() => onSignUp?.({ email, name })}
+              activeOpacity={0.9}
             >
-              <Text style={styles.primaryButtonText}>가입하고 시작하기</Text>
+              <Text style={styles.primaryBtnText}>가입하고 시작하기</Text>
             </TouchableOpacity>
 
-            <View style={styles.authFooterRow}>
-              <Text style={styles.mutedText}>이미 계정이 있나?</Text>
+            <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 14 }}>
+              <Text style={{ color: "#64748b" }}>이미 계정이 있나요?</Text>
               <TouchableOpacity onPress={() => navigation.goBack()}>
-                <Text style={styles.linkText}> 로그인</Text>
+                <Text style={{ color: "#2563eb", fontWeight: "800" }}> 로그인</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           <Text style={styles.authNotice}>
-            * 학교 이메일 인증, 약관 동의 UI는 다음 단계에서 추가하면 됨.
+            * 학교 이메일 인증/약관동의는 다음 단계에서 추가하면 됨.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -239,17 +269,18 @@ const SignUpScreen = ({ navigation, onSignUp }) => {
 const AuthNavigator = ({ onLogin }) => {
   return (
     <AuthStack.Navigator>
-      <AuthStack.Screen
-        name="Login"
-        options={{ headerShown: false }}
-      >
-        {(props) => <LoginScreen {...props} onLogin={onLogin} />}
+      <AuthStack.Screen name="Login" options={{ headerShown: false }}>
+        {(props) => (
+          <LoginScreen
+            {...props}
+            onEmailLogin={({ email }) => onLogin({ email })}
+            onGoogleLogin={() => Alert.alert("Google 로그인", "TODO: Google OAuth 연결")}
+            onKakaoLogin={() => Alert.alert("Kakao 로그인", "TODO: Kakao OAuth 연결")}
+          />
+        )}
       </AuthStack.Screen>
 
-      <AuthStack.Screen
-        name="SignUp"
-        options={{ title: "회원가입" }}
-      >
+      <AuthStack.Screen name="SignUp" options={{ title: "회원가입" }}>
         {(props) => <SignUpScreen {...props} onSignUp={onLogin} />}
       </AuthStack.Screen>
     </AuthStack.Navigator>
@@ -257,7 +288,7 @@ const AuthNavigator = ({ onLogin }) => {
 };
 
 /** -----------------------------
- *  Main Screens (Existing)
+ *  Main Screens
  *  ----------------------------- */
 const HomeScreen = ({ navigation }) => {
   const [keyword, setKeyword] = useState("");
@@ -345,10 +376,10 @@ const ListingDetailScreen = ({ route }) => {
         <Text style={styles.detailDesc}>{listing.desc}</Text>
 
         <TouchableOpacity
-          style={[styles.primaryButton, { marginTop: 16 }]}
-          onPress={() => alert("TODO: 채팅 시작")}
+          style={[styles.primaryBtn, { marginTop: 16 }]}
+          onPress={() => Alert.alert("채팅", "TODO: 채팅 화면 연결")}
         >
-          <Text style={styles.primaryButtonText}>채팅으로 문의하기</Text>
+          <Text style={styles.primaryBtnText}>채팅으로 문의하기</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -365,7 +396,7 @@ const CreateListingScreen = () => {
 
   const handleSubmit = () => {
     console.log({ title, campus, rent, deposit, gender, desc });
-    alert("임시: 콘솔 출력. 백엔드 붙이면 실제 등록으로 변경.");
+    Alert.alert("등록", "임시: 콘솔 출력. 백엔드 붙이면 실제 등록으로 변경.");
   };
 
   return (
@@ -375,7 +406,7 @@ const CreateListingScreen = () => {
 
         <Text style={styles.label}>제목</Text>
         <TextInput
-          style={styles.input}
+          style={styles.basicInput}
           placeholder="예) OO대 도보 5분 투룸 / 룸메 구함"
           value={title}
           onChangeText={setTitle}
@@ -383,7 +414,7 @@ const CreateListingScreen = () => {
 
         <Text style={styles.label}>학교 / 캠퍼스</Text>
         <TextInput
-          style={styles.input}
+          style={styles.basicInput}
           placeholder="예) OO대학교"
           value={campus}
           onChangeText={setCampus}
@@ -391,7 +422,7 @@ const CreateListingScreen = () => {
 
         <Text style={styles.label}>월세 (만원)</Text>
         <TextInput
-          style={styles.input}
+          style={styles.basicInput}
           keyboardType="numeric"
           placeholder="예) 35"
           value={rent}
@@ -400,7 +431,7 @@ const CreateListingScreen = () => {
 
         <Text style={styles.label}>보증금 (만원)</Text>
         <TextInput
-          style={styles.input}
+          style={styles.basicInput}
           keyboardType="numeric"
           placeholder="예) 200"
           value={deposit}
@@ -409,7 +440,7 @@ const CreateListingScreen = () => {
 
         <Text style={styles.label}>선호 성별</Text>
         <TextInput
-          style={styles.input}
+          style={styles.basicInput}
           placeholder="예) 남성 / 여성 / 무관"
           value={gender}
           onChangeText={setGender}
@@ -417,15 +448,15 @@ const CreateListingScreen = () => {
 
         <Text style={styles.label}>상세 설명</Text>
         <TextInput
-          style={[styles.input, { height: 120, textAlignVertical: "top" }]}
+          style={[styles.basicInput, { height: 120, textAlignVertical: "top" }]}
           placeholder="집 구조, 생활 패턴, 하우스 룰 등"
           multiline
           value={desc}
           onChangeText={setDesc}
         />
 
-        <TouchableOpacity style={styles.primaryButton} onPress={handleSubmit}>
-          <Text style={styles.primaryButtonText}>등록하기</Text>
+        <TouchableOpacity style={styles.primaryBtn} onPress={handleSubmit}>
+          <Text style={styles.primaryBtnText}>등록하기</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -437,6 +468,7 @@ const MyPageScreen = ({ onLogout, user }) => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.screenContainer}>
         <Text style={styles.screenTitle}>마이페이지</Text>
+
         <View style={styles.detailBox}>
           <Text style={styles.detailRow}>
             로그인: <Text style={styles.detailValue}>{user?.email}</Text>
@@ -444,10 +476,10 @@ const MyPageScreen = ({ onLogout, user }) => {
         </View>
 
         <TouchableOpacity
-          style={[styles.primaryButton, { backgroundColor: "#ef4444" }]}
+          style={[styles.primaryBtn, { backgroundColor: "#ef4444" }]}
           onPress={onLogout}
         >
-          <Text style={styles.primaryButtonText}>로그아웃</Text>
+          <Text style={styles.primaryBtnText}>로그아웃</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -490,7 +522,7 @@ const TabNavigator = ({ onLogout, user }) => (
 export default function App() {
   const [user, setUser] = useState(null);
 
-  const authValue = useMemo(
+  const auth = useMemo(
     () => ({
       login: (u) => setUser(u),
       logout: () => setUser(null),
@@ -503,11 +535,11 @@ export default function App() {
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
           <RootStack.Screen name="Main">
-            {() => <TabNavigator onLogout={authValue.logout} user={user} />}
+            {() => <TabNavigator onLogout={auth.logout} user={user} />}
           </RootStack.Screen>
         ) : (
           <RootStack.Screen name="Auth">
-            {() => <AuthNavigator onLogin={authValue.login} />}
+            {() => <AuthNavigator onLogin={auth.login} />}
           </RootStack.Screen>
         )}
       </RootStack.Navigator>
@@ -519,37 +551,116 @@ export default function App() {
  *  Styles
  *  ----------------------------- */
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#f9fafb",
-  },
-  screenContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-  },
+  safeArea: { flex: 1, backgroundColor: "#ffffff" },
 
-  // Auth
+  // Login design
+  loginContainer: {
+    flex: 1,
+    paddingHorizontal: 18,
+    paddingTop: 26,
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+  },
+  logoWrap: { flexDirection: "row", alignItems: "center", marginTop: 10 },
+  logoIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: "#2563eb",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  logoText: { fontSize: 34, fontWeight: "800", color: "#0f172a" },
+  tagline: { marginTop: 10, marginBottom: 30, fontSize: 14, color: "#64748b" },
+  formWrap: { width: "100%", maxWidth: 420 },
+
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 54,
+    backgroundColor: "#ffffff",
+  },
+  input: { flex: 1, marginLeft: 10, fontSize: 15, color: "#0f172a" },
+
+  primaryBtn: {
+    marginTop: 18,
+    height: 58,
+    borderRadius: 18,
+    backgroundColor: "#2563eb",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  primaryBtnText: { color: "#ffffff", fontSize: 20, fontWeight: "800" },
+  btnDisabled: { opacity: 0.45 },
+
+  dividerRow: { marginTop: 18, marginBottom: 14, flexDirection: "row", alignItems: "center" },
+  dividerLine: { flex: 1, height: 1, backgroundColor: "#e2e8f0" },
+  dividerText: { marginHorizontal: 12, color: "#64748b", fontWeight: "700" },
+
+  googleBtn: {
+    height: 54,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    marginBottom: 12,
+  },
+  googleIconCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  googleG: { fontSize: 16, fontWeight: "900", color: "#ef4444" },
+  googleBtnText: { fontSize: 16, fontWeight: "800", color: "#334155" },
+
+  kakaoBtn: {
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: "#FEE500",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+  },
+  kakaoBubble: {
+    backgroundColor: "#111827",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    marginRight: 10,
+  },
+  kakaoTalk: { color: "#FEE500", fontWeight: "900" },
+  kakaoBtnText: { fontSize: 16, fontWeight: "900", color: "#111827" },
+
+  bottomRow: { marginTop: 22, flexDirection: "row", justifyContent: "center" },
+  bottomText: { color: "#64748b", fontSize: 14 },
+  bottomLink: { color: "#F59E0B", fontWeight: "900", fontSize: 14 },
+
+  authNotice: { fontSize: 12, color: "#9ca3af", textAlign: "center", marginTop: 12 },
+
+  // SignUp layout
   authContainer: {
     flexGrow: 1,
     paddingHorizontal: 16,
     paddingTop: 32,
     paddingBottom: 28,
     justifyContent: "center",
+    backgroundColor: "#ffffff",
   },
-  brandTitle: {
-    fontSize: 32,
-    fontWeight: "800",
-    textAlign: "center",
-    color: "#111827",
-  },
-  brandSub: {
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 6,
-    marginBottom: 18,
-    color: "#6b7280",
-  },
+  brandTitle: { fontSize: 32, fontWeight: "800", textAlign: "center", color: "#111827" },
+  brandSub: { fontSize: 14, textAlign: "center", marginTop: 6, marginBottom: 18, color: "#6b7280" },
   authCard: {
     backgroundColor: "white",
     borderRadius: 16,
@@ -557,39 +668,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e5e7eb",
   },
-  authTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 12,
-    color: "#111827",
-  },
-  authFooterRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 14,
-  },
-  authNotice: {
-    fontSize: 12,
-    color: "#9ca3af",
-    textAlign: "center",
-    marginTop: 12,
-  },
-
-  // Common
-  screenTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 12,
-    color: "#111827",
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    marginTop: 10,
-    marginBottom: 4,
-    color: "#4b5563",
-  },
-  input: {
+  label: { fontSize: 13, fontWeight: "600", marginTop: 10, marginBottom: 4, color: "#4b5563" },
+  basicInput: {
     backgroundColor: "white",
     borderRadius: 10,
     paddingHorizontal: 12,
@@ -598,9 +678,12 @@ const styles = StyleSheet.create({
     borderColor: "#e5e7eb",
     fontSize: 13,
   },
-  searchContainer: {
-    marginBottom: 12,
-  },
+  warnText: { marginTop: 6, color: "#ef4444", fontSize: 12 },
+
+  // Main screens
+  screenContainer: { flex: 1, paddingHorizontal: 16, paddingTop: 12, backgroundColor: "#f9fafb" },
+  screenTitle: { fontSize: 22, fontWeight: "700", marginBottom: 12, color: "#111827" },
+  searchContainer: { marginBottom: 12 },
   searchInput: {
     backgroundColor: "white",
     borderRadius: 12,
@@ -609,40 +692,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e5e7eb",
   },
-  primaryButton: {
-    marginTop: 16,
-    backgroundColor: "#2563eb",
-    paddingVertical: 12,
-    borderRadius: 999,
-    alignItems: "center",
-  },
-  primaryButtonText: {
-    color: "white",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  buttonDisabled: {
-    opacity: 0.45,
-  },
-  mutedText: {
-    color: "#6b7280",
-  },
-  linkText: {
-    color: "#2563eb",
-    fontWeight: "700",
-  },
-  mutedLinkText: {
-    color: "#6b7280",
-    textAlign: "center",
-    textDecorationLine: "underline",
-  },
-  warnText: {
-    marginTop: 6,
-    color: "#ef4444",
-    fontSize: 12,
-  },
-
-  // Listing cards / detail
   card: {
     backgroundColor: "white",
     borderRadius: 14,
@@ -651,32 +700,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e5e7eb",
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 4,
-    color: "#111827",
-  },
-  cardSub: {
-    fontSize: 13,
-    color: "#4b5563",
-    marginBottom: 4,
-  },
-  cardTag: {
-    fontSize: 12,
-    color: "#2563eb",
-    marginBottom: 4,
-  },
-  cardDesc: {
-    fontSize: 12,
-    color: "#6b7280",
-  },
-  detailTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 12,
-    color: "#111827",
-  },
+  cardTitle: { fontSize: 16, fontWeight: "600", marginBottom: 4, color: "#111827" },
+  cardSub: { fontSize: 13, color: "#4b5563", marginBottom: 4 },
+  cardTag: { fontSize: 12, color: "#2563eb", marginBottom: 4 },
+  cardDesc: { fontSize: 12, color: "#6b7280" },
+
+  detailTitle: { fontSize: 20, fontWeight: "700", marginBottom: 12, color: "#111827" },
   detailBox: {
     backgroundColor: "white",
     borderRadius: 12,
@@ -685,24 +714,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e5e7eb",
   },
-  detailRow: {
-    fontSize: 14,
-    marginBottom: 6,
-    color: "#4b5563",
-  },
-  detailValue: {
-    fontWeight: "700",
-    color: "#111827",
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 6,
-    color: "#111827",
-  },
-  detailDesc: {
-    fontSize: 14,
-    color: "#4b5563",
-    lineHeight: 20,
-  },
+  detailRow: { fontSize: 14, marginBottom: 6, color: "#4b5563" },
+  detailValue: { fontWeight: "700", color: "#111827" },
+  sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 6, color: "#111827" },
+  detailDesc: { fontSize: 14, color: "#4b5563", lineHeight: 20 },
 });
