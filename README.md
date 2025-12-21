@@ -1,3 +1,5 @@
+<img width="1536" height="1024" alt="Image" src="https://github.com/user-attachments/assets/65ad79fb-0312-47b0-ba2b-6a6abb9df996" />
+
 # 📱 UniHouse(Campus Roommate) App  
 > 대학가 인근 룸메이트·매물 매칭 서비스  
 > *Built with Spring Boot (Backend) & React Native (Mobile App)*
