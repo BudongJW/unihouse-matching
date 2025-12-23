@@ -35,21 +35,66 @@ WebBrowser.maybeCompleteAuthSession();
 /** -----------------------------
  *  🔧 환경설정 값
  *  ----------------------------- */
-// 🔧 Kakao Developers에서 REST API KEY
 const KAKAO_REST_API_KEY = "🔧KAKAO_REST_API_KEY";
 
-// 🔧 Google Cloud OAuth Client ID들
-// - Expo Go로 테스트: 보통 expoClientId만으로도 동작하지만,
-// - EAS 빌드/스토어 배포까지 가면 iosClientId/androidClientId도 넣는게 안전함.
-const GOOGLE_EXPO_CLIENT_ID = "🔧GOOGLE_EXPO_CLIENT_ID"; // 권장(Expo 환경용)
-const GOOGLE_IOS_CLIENT_ID = "🔧GOOGLE_IOS_CLIENT_ID"; // 선택(나중에 iOS 빌드)
-const GOOGLE_ANDROID_CLIENT_ID = "🔧GOOGLE_ANDROID_CLIENT_ID"; // 선택(나중에 Android 빌드)
-const GOOGLE_WEB_CLIENT_ID = "🔧GOOGLE_WEB_CLIENT_ID"; // 선택(웹 지원 시)
+const GOOGLE_EXPO_CLIENT_ID = "🔧GOOGLE_EXPO_CLIENT_ID";
+const GOOGLE_IOS_CLIENT_ID = "🔧GOOGLE_IOS_CLIENT_ID";
+const GOOGLE_ANDROID_CLIENT_ID = "🔧GOOGLE_ANDROID_CLIENT_ID";
+const GOOGLE_WEB_CLIENT_ID = "🔧GOOGLE_WEB_CLIENT_ID";
+
+/** -----------------------------
+ *  Types
+ *  ----------------------------- */
+type Listing = {
+  id: string;
+  title: string;
+  campus: string;
+  rent: number;
+  deposit: number;
+  gender: string;
+  desc: string;
+};
+
+type User =
+  | { provider: "email"; email: string }
+  | { provider: "google"; accessToken?: string }
+  | { provider: "kakao"; code: string };
+
+type EmailLoginPayload = { email: string; password: string };
+type SignUpPayload = { email: string; name: string };
+
+type NavLike = {
+  navigate: (screen: string, params?: any) => void;
+  goBack?: () => void;
+};
+
+type LoginScreenProps = {
+  navigation: NavLike;
+  onEmailLogin?: (payload: EmailLoginPayload) => void | Promise<void>;
+  onGoogleLogin?: () => void | Promise<void>;
+  onKakaoLogin?: () => void | Promise<void>;
+};
+
+type SignUpScreenProps = {
+  navigation: NavLike;
+  onSignUp?: (payload: SignUpPayload) => void | Promise<void>;
+};
+
+type AuthNavigatorProps = {
+  onLogin: (u: User) => void;
+  onGoogleLogin: () => void | Promise<void>;
+  onKakaoLogin: () => void | Promise<void>;
+};
+
+type TabNavigatorProps = {
+  onLogout: () => void;
+  user: User;
+};
 
 /** -----------------------------
  *  Mock Data
  *  ----------------------------- */
-const MOCK_LISTINGS = [
+const MOCK_LISTINGS: Listing[] = [
   {
     id: "1",
     title: "OO대학교 도보 5분 투룸 / 남성 룸메 구함",
@@ -90,22 +135,22 @@ const Tab = createBottomTabNavigator();
 /** -----------------------------
  *  Login Screen (구글/카카오 버튼 props 연결)
  *  ----------------------------- */
-const LoginScreen = ({
+const LoginScreen: React.FC<LoginScreenProps> = ({
   navigation,
   onEmailLogin,
   onGoogleLogin,
   onKakaoLogin,
 }) => {
-  const [email, setEmail] = useState("");
-  const [pw, setPw] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState<string>("");
+  const [pw, setPw] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
 
   const canSubmit = useMemo(
     () => email.trim().length > 0 && pw.trim().length >= 4 && !loading,
     [email, pw, loading]
   );
 
-  const run = async (fn) => {
+  const run = async (fn?: () => void | Promise<void>) => {
     if (!fn) return;
     try {
       setLoading(true);
@@ -162,9 +207,7 @@ const LoginScreen = ({
           <TouchableOpacity
             style={[styles.primaryBtn, !canSubmit && styles.btnDisabled]}
             disabled={!canSubmit}
-            onPress={() =>
-              run(() => onEmailLogin?.({ email, password: pw }))
-            }
+            onPress={() => run(() => onEmailLogin?.({ email, password: pw }))}
             activeOpacity={0.9}
           >
             {loading ? (
@@ -230,15 +273,15 @@ const LoginScreen = ({
 /** -----------------------------
  *  SignUp Screen (간단)
  *  ----------------------------- */
-const SignUpScreen = ({ navigation, onSignUp }) => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [pw, setPw] = useState("");
-  const [pw2, setPw2] = useState("");
+const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation, onSignUp }) => {
+  const [name, setName] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+  const [pw, setPw] = useState<string>("");
+  const [pw2, setPw2] = useState<string>("");
 
   const pwOk = pw.trim().length >= 6;
   const matchOk = pw === pw2 && pw2.length > 0;
-  const canSubmit = name.trim() && email.trim() && pwOk && matchOk;
+  const canSubmit = Boolean(name.trim() && email.trim() && pwOk && matchOk);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -302,10 +345,19 @@ const SignUpScreen = ({ navigation, onSignUp }) => {
               <Text style={styles.primaryBtnText}>가입하고 시작하기</Text>
             </TouchableOpacity>
 
-            <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 14 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "center",
+                marginTop: 14,
+              }}
+            >
               <Text style={{ color: "#64748b" }}>이미 계정이 있나요?</Text>
-              <TouchableOpacity onPress={() => navigation.goBack()}>
-                <Text style={{ color: "#2563eb", fontWeight: "800" }}> 로그인</Text>
+              <TouchableOpacity onPress={() => navigation.goBack?.()}>
+                <Text style={{ color: "#2563eb", fontWeight: "800" }}>
+                  {" "}
+                  로그인
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -322,11 +374,15 @@ const SignUpScreen = ({ navigation, onSignUp }) => {
 /** -----------------------------
  *  Auth Navigator
  *  ----------------------------- */
-const AuthNavigator = ({ onLogin, onGoogleLogin, onKakaoLogin }) => {
+const AuthNavigator: React.FC<AuthNavigatorProps> = ({
+  onLogin,
+  onGoogleLogin,
+  onKakaoLogin,
+}) => {
   return (
     <AuthStack.Navigator>
       <AuthStack.Screen name="Login" options={{ headerShown: false }}>
-        {(props) => (
+        {(props: any) => (
           <LoginScreen
             {...props}
             onEmailLogin={({ email }) => onLogin({ provider: "email", email })}
@@ -337,7 +393,9 @@ const AuthNavigator = ({ onLogin, onGoogleLogin, onKakaoLogin }) => {
       </AuthStack.Screen>
 
       <AuthStack.Screen name="SignUp" options={{ title: "회원가입" }}>
-        {(props) => <SignUpScreen {...props} onSignUp={onLogin} />}
+        {(props: any) => (
+          <SignUpScreen {...props} onSignUp={onLogin as any} />
+        )}
       </AuthStack.Screen>
     </AuthStack.Navigator>
   );
@@ -346,7 +404,7 @@ const AuthNavigator = ({ onLogin, onGoogleLogin, onKakaoLogin }) => {
 /** -----------------------------
  *  Kakao OAuth helper (OAuth + 딥링크)
  *  ----------------------------- */
-async function startKakaoLogin() {
+async function startKakaoLogin(): Promise<string | null> {
   const redirectUri = Linking.createURL("oauth"); // unihouse://oauth
   const authUrl =
     "https://kauth.kakao.com/oauth/authorize" +
@@ -359,7 +417,7 @@ async function startKakaoLogin() {
   if (result.type === "success" && result.url) {
     const parsed = Linking.parse(result.url);
     const code = parsed.queryParams?.code;
-    if (code) return code;
+    if (typeof code === "string" && code.length > 0) return code;
   }
   return null;
 }
@@ -367,11 +425,11 @@ async function startKakaoLogin() {
 /** -----------------------------
  *  Main Screens
  *  ----------------------------- */
-const HomeScreen = ({ navigation }) => {
-  const [keyword, setKeyword] = useState("");
-  const [filtered, setFiltered] = useState(MOCK_LISTINGS);
+const HomeScreen: React.FC<{ navigation: NavLike }> = ({ navigation }) => {
+  const [keyword, setKeyword] = useState<string>("");
+  const [filtered, setFiltered] = useState<Listing[]>(MOCK_LISTINGS);
 
-  const handleSearch = (text) => {
+  const handleSearch = (text: string) => {
     setKeyword(text);
     if (!text) return setFiltered(MOCK_LISTINGS);
     const lower = text.toLowerCase();
@@ -384,7 +442,7 @@ const HomeScreen = ({ navigation }) => {
     );
   };
 
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item }: { item: Listing }) => (
     <TouchableOpacity
       style={styles.card}
       onPress={() => navigation.navigate("ListingDetail", { listing: item })}
@@ -425,8 +483,8 @@ const HomeScreen = ({ navigation }) => {
   );
 };
 
-const ListingDetailScreen = ({ route }) => {
-  const { listing } = route.params;
+const ListingDetailScreen: React.FC<{ route: any }> = ({ route }) => {
+  const { listing } = route.params as { listing: Listing };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: "#f9fafb" }]}>
@@ -462,13 +520,13 @@ const ListingDetailScreen = ({ route }) => {
   );
 };
 
-const CreateListingScreen = () => {
-  const [title, setTitle] = useState("");
-  const [campus, setCampus] = useState("");
-  const [rent, setRent] = useState("");
-  const [deposit, setDeposit] = useState("");
-  const [gender, setGender] = useState("");
-  const [desc, setDesc] = useState("");
+const CreateListingScreen: React.FC = () => {
+  const [title, setTitle] = useState<string>("");
+  const [campus, setCampus] = useState<string>("");
+  const [rent, setRent] = useState<string>("");
+  const [deposit, setDeposit] = useState<string>("");
+  const [gender, setGender] = useState<string>("");
+  const [desc, setDesc] = useState<string>("");
 
   const handleSubmit = () => {
     console.log({ title, campus, rent, deposit, gender, desc });
@@ -539,7 +597,10 @@ const CreateListingScreen = () => {
   );
 };
 
-const MyPageScreen = ({ onLogout, user }) => {
+const MyPageScreen: React.FC<{ onLogout: () => void; user: User }> = ({
+  onLogout,
+  user,
+}) => {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: "#f9fafb" }]}>
       <View style={styles.screenContainer}>
@@ -547,9 +608,10 @@ const MyPageScreen = ({ onLogout, user }) => {
 
         <View style={styles.detailBox}>
           <Text style={styles.detailRow}>
-            provider: <Text style={styles.detailValue}>{user?.provider}</Text>
+            provider: <Text style={styles.detailValue}>{user.provider}</Text>
           </Text>
-          {user?.email ? (
+
+          {"email" in user ? (
             <Text style={styles.detailRow}>
               email: <Text style={styles.detailValue}>{user.email}</Text>
             </Text>
@@ -570,18 +632,18 @@ const MyPageScreen = ({ onLogout, user }) => {
 /** -----------------------------
  *  Main Navigation
  *  ----------------------------- */
-const HomeStackNavigator = () => (
+const HomeStackNavigator: React.FC = () => (
   <HomeStack.Navigator>
-    <HomeStack.Screen name="Home" component={HomeScreen} options={{ title: "홈" }} />
+    <HomeStack.Screen name="Home" component={HomeScreen as any} options={{ title: "홈" }} />
     <HomeStack.Screen
       name="ListingDetail"
-      component={ListingDetailScreen}
+      component={ListingDetailScreen as any}
       options={{ title: "매물 상세" }}
     />
   </HomeStack.Navigator>
 );
 
-const TabNavigator = ({ onLogout, user }) => (
+const TabNavigator: React.FC<TabNavigatorProps> = ({ onLogout, user }) => (
   <Tab.Navigator
     screenOptions={{
       headerShown: false,
@@ -600,42 +662,34 @@ const TabNavigator = ({ onLogout, user }) => (
 /** -----------------------------
  *  App Root (Google AuthSession + Kakao OAuth 연결 완료)
  *  ----------------------------- */
-export default function App() {
-  const [user, setUser] = useState(null);
+export default function App(): JSX.Element {
+  const [user, setUser] = useState<User | null>(null);
 
-  // ✅ Google AuthSession
-  const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
-    expoClientId: GOOGLE_EXPO_CLIENT_ID,
-    iosClientId: GOOGLE_IOS_CLIENT_ID,
-    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
-    webClientId: GOOGLE_WEB_CLIENT_ID,
-    scopes: ["profile", "email"],
-  });
+  const [googleRequest, googleResponse, googlePromptAsync] =
+    Google.useAuthRequest({
+      expoClientId: GOOGLE_EXPO_CLIENT_ID,
+      iosClientId: GOOGLE_IOS_CLIENT_ID,
+      androidClientId: GOOGLE_ANDROID_CLIENT_ID,
+      webClientId: GOOGLE_WEB_CLIENT_ID,
+      scopes: ["profile", "email"],
+    });
 
-  // Google 로그인 성공 처리
   useEffect(() => {
     if (googleResponse?.type === "success") {
-      const { authentication } = googleResponse;
-      const accessToken = authentication?.accessToken;
-
-      // 🔧 여기서 백엔드 연결 시:
-      // POST /auth/google { accessToken } -> JWT 발급
-      setUser({
-        provider: "google",
-        accessToken,
-      });
+      const accessToken = googleResponse.authentication?.accessToken;
+      setUser({ provider: "google", accessToken });
     }
   }, [googleResponse]);
 
   const auth = useMemo(
     () => ({
-      login: (u) => setUser(u),
+      login: (u: User) => setUser(u),
       logout: () => setUser(null),
     }),
     []
   );
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = async (): Promise<void> => {
     if (!googleRequest) {
       Alert.alert("Google 로그인", "요청 객체가 준비되지 않았습니다. 잠시 후 다시 시도하세요.");
       return;
@@ -643,19 +697,13 @@ export default function App() {
     await googlePromptAsync();
   };
 
-  const handleKakaoLogin = async () => {
+  const handleKakaoLogin = async (): Promise<void> => {
     const code = await startKakaoLogin();
     if (!code) {
       Alert.alert("Kakao 로그인", "로그인이 취소되었거나 실패했습니다.");
       return;
     }
-
-    // 🔧 여기서 백엔드 연결 시:
-    // POST /auth/kakao { code } -> JWT 발급
-    setUser({
-      provider: "kakao",
-      code,
-    });
+    setUser({ provider: "kakao", code });
   };
 
   return (
