@@ -17,10 +17,12 @@ type EmailLoginPayload = {
   password: string;
 };
 
+type NavigationLike = {
+  navigate?: (screen: string) => void;
+};
+
 type LoginScreenProps = {
-  navigation?: {
-    navigate?: (screen: string) => void;
-  };
+  navigation?: NavigationLike;
   onEmailLogin?: (payload: EmailLoginPayload) => void | Promise<void>;
   onGoogleLogin?: () => void | Promise<void>;
   onKakaoLogin?: () => void | Promise<void>;
@@ -28,7 +30,7 @@ type LoginScreenProps = {
 };
 
 export default function LoginScreen({
-  navigation,
+  navigation, // (Stack에서 넘기는 경우)
   onEmailLogin,
   onGoogleLogin,
   onKakaoLogin,
@@ -38,7 +40,7 @@ export default function LoginScreen({
   const [pw, setPw] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
-  const canSubmit = useMemo<boolean>(
+  const canSubmit = useMemo(
     () => email.trim().length > 0 && pw.trim().length >= 4 && !loading,
     [email, pw, loading]
   );
@@ -97,7 +99,7 @@ export default function LoginScreen({
             />
           </View>
 
-          {/* Email login */}
+          {/* 이메일 로그인 */}
           <TouchableOpacity
             style={[styles.primaryBtn, !canSubmit && styles.btnDisabled]}
             disabled={!canSubmit}
