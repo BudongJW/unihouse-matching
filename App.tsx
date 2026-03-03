@@ -909,72 +909,25 @@ function AuthNavigator({ onLogin, onGoogleLogin }: any) {
   );
 }
 
+let webInitialToken: string | null = null;
+
+if (Platform.OS === "web") {
+  const currentUrl = window.location.href;
+  
+  if (currentUrl.includes("token=")) {
+    webInitialToken = currentUrl.split("token=")[1].split("&")[0].split("#")[0];
+    const cleanUrl = currentUrl.split("?token=")[0].split("&token=")[0];
+    window.history.replaceState({}, document.title, cleanUrl);
+  }
+}
+
 // ============================================================
 // App Root
 // ============================================================
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
-  // const [showGenderModal, setShowGenderModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  // // 1. 내 정보 확인 및 성별 체크 함수
-  // const checkUserGender = async (token: string) => {
-  //   try {
-  //     const response = await fetch(`${BACKEND_URL}/api/members/me`, {
-  //       headers: {
-  //         Authorization: `Bearer ${token}`,
-  //       },
-  //     });
-
-  //     if (response.ok) {
-  //       const userData = await response.json();
-  //       console.log("내 정보 확인:", userData);
-
-  //       // ✅ 성별이 없으면 모달 띄우기
-  //       if (!userData.gender) {
-  //         setShowGenderModal(true);
-  //       }
-
-  //       setUser({
-  //         provider: "google", // or dynamic
-  //         email: userData.email,
-  //         accessToken: token,
-  //         gender: userData.gender,
-  //       });
-  //     }
-  //   } catch (error) {
-  //     console.error("사용자 정보 로드 실패:", error);
-  //   }
-  // };
-
-  // // 2. 성별 업데이트 요청 함수 (모달에서 선택 시 실행)
-  // const handleUpdateGender = async (selectedGender: string) => {
-  //   if (!user?.accessToken) return;
-
-  //   try {
-  //     const response = await fetch(`${BACKEND_URL}/api/members/gender`, {
-  //       method: "PUT",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //         Authorization: `Bearer ${user.accessToken}`,
-  //       },
-  //       body: JSON.stringify({ gender: selectedGender }),
-  //     });
-
-  //     if (response.ok) {
-  //       Alert.alert("환영합니다!", "성별 정보가 저장되었습니다.");
-  //       setShowGenderModal(false); // 모달 닫기
-        
-  //       // 유저 상태 업데이트
-  //       setUser((prev) => prev ? { ...prev, gender: selectedGender } : null);
-  //     } else {
-  //       Alert.alert("오류", "정보 저장에 실패했습니다.");
-  //     }
-  //   } catch (e) {
-  //     console.error(e);
-  //     Alert.alert("오류", "서버 연결 실패");
-  //   }
-  // };
   const checkUserInfo = async (token: string) => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/members/me`, {
@@ -1042,7 +995,7 @@ export default function App() {
     const backendUrl = `${BACKEND_URL}/oauth2/authorization/google`;
 
     if (Platform.OS === "web") {
-      sessionStorage.setItem("keepLoggedIn", keepLoggedIn ? "true" : "false");
+      window.sessionStorage.setItem("keepLoggedIn", keepLoggedIn ? "true" : "false");
       window.location.href = backendUrl;
     } else {
       const redirectUrl = Linking.createURL("oauth/callback");
@@ -1066,38 +1019,37 @@ export default function App() {
 
   useEffect(() => {
     if (Platform.OS === "web") {
-      const url = window.location.href;
-      if (url.includes("token=")) {
-        const token = url.split("token=")[1].split("&")[0];
-        if (token) {
-          setUser({ provider: "google", accessToken: token });
-          
-          const keepLoggedIn = sessionStorage.getItem("keepLoggedIn") === "true";
-          if(keepLoggedIn){
-            AsyncStorage.setItem("userToken", token);
-          } else {
-            sessionStorage.setItem("userToken", token);
-          }
-          window.history.replaceState({}, document.title, "/");
-          checkUserInfo(token);
+      
+      if (webInitialToken) {
+        setUser({ provider: "google", accessToken: webInitialToken });
+        
+        const keepLoggedIn = sessionStorage.getItem("keepLoggedIn") === "true";
+        if (keepLoggedIn) {
+          AsyncStorage.setItem("userToken", webInitialToken);
+        } else {
+          window.sessionStorage.setItem("userToken", webInitialToken);
         }
+        
+        setUser({ provider: "google", accessToken: webInitialToken });
+        checkUserInfo(webInitialToken);
+        
+        webInitialToken = null;
+        window.sessionStorage.removeItem("keepLoggedIn");
+        
       } else {
-        const sessionToken = sessionStorage.getItem("userToken");
-        if(sessionToken) {
-          checkUserInfo(sessionToken)
+        const sessionToken = window.sessionStorage.getItem("userToken");
+        if (sessionToken) {
+          checkUserInfo(sessionToken);
         } else {
           AsyncStorage.getItem("userToken").then((storedToken) => {
-            if(storedToken) checkUserInfo(storedToken);
-          })
+            if (storedToken) checkUserInfo(storedToken);
+          });
         }
-        AsyncStorage.getItem("userToken").then((token) => {
-          // if(token) checkUserGender(token);
-          if(token) checkUserInfo(token);
-        });
       }
+      
     } else {
       AsyncStorage.getItem("userToken").then((token) => {
-        if(token) checkUserInfo(token);
+        if (token) checkUserInfo(token);
       });
     }
   }, []);
