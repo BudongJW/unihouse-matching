@@ -31,26 +31,29 @@ WebBrowser.maybeCompleteAuthSession();
 const BACKEND_URL = "http://localhost:8080";
 const { width } = Dimensions.get("window");
 
-// 색상 시스템
+// 색상 시스템 — 직방 × 디시인사이드 퓨전
 const COLORS = {
-  primary: "#3B82F6",
-  primaryDark: "#2563EB",
-  primaryLight: "#DBEAFE",
-  secondary: "#8B5CF6",
-  background: "#F9FAFB",
+  primary: "#1666F4",       // 직방 블루
+  primaryDark: "#0D4ECC",
+  primaryLight: "#E8F0FE",
+  accent: "#FF4500",        // 디시 오렌지레드 (HOT/NEW 뱃지)
+  accentLight: "#FFF1EB",
+  navy: "#0A1628",          // 직방 다크 헤더
+  background: "#F2F3F6",    // 디시 배경 회색
   cardBg: "#FFFFFF",
   text: {
-    primary: "#111827",
-    secondary: "#6B7280",
+    primary: "#1A1A2E",
+    secondary: "#5C6370",
     tertiary: "#9CA3AF",
   },
-  border: "#E5E7EB",
-  success: "#10B981",
-  warning: "#F59E0B",
-  error: "#EF4444",
+  border: "#E0E2E8",
+  success: "#00C471",       // 직방 그린
+  warning: "#FF9500",
+  error: "#FF3B30",
+  hot: "#FF4500",           // 디시 HOT 컬러
   gradient: {
-    start: "#3B82F6",
-    end: "#8B5CF6",
+    start: "#1666F4",
+    end: "#0D4ECC",
   },
 };
 
@@ -246,9 +249,21 @@ function ListingCard({
         onPressOut={handlePressOut}
         activeOpacity={1}
       >
-        {/* 이미지 영역 (placeholder) */}
+        {/* 이미지 영역 — 직방 그라데이션 플레이스홀더 */}
         <View style={styles.cardImagePlaceholder}>
-          <Ionicons name="home" size={40} color={COLORS.text.tertiary} />
+          <Ionicons name="home" size={40} color="rgba(255,255,255,0.5)" />
+          {/* HOT 뱃지 — 디시인사이드 스타일 */}
+          {item.isBookmarked && (
+            <View style={styles.hotBadge}>
+              <Text style={styles.hotBadgeText}>🔥 HOT</Text>
+            </View>
+          )}
+          {/* NEW 뱃지 */}
+          {item.postedAt && item.postedAt.includes("방금") && (
+            <View style={styles.newBadge}>
+              <Text style={styles.newBadgeText}>NEW</Text>
+            </View>
+          )}
         </View>
 
         {/* 북마크 버튼 */}
@@ -285,18 +300,26 @@ function ListingCard({
             {item.title}
           </Text>
 
-          {/* 태그들 */}
+          {/* 태그들 — 디시 스타일 메타 정보 행 */}
           <View style={styles.tags}>
-            <View style={styles.tag}>
+            <View style={[styles.tag, styles.genderTag,
+              item.gender === "FEMALE" && styles.genderTagFemale]}>
               <Ionicons
-                name={item.gender === "MALE" ? "male" : "female"} // 아이콘 선택 로직 단순화
-                size={12}
-                color={COLORS.secondary}
+                name={item.gender === "MALE" ? "male" : item.gender === "FEMALE" ? "female" : "people"}
+                size={11}
+                color={item.gender === "FEMALE" ? COLORS.error : COLORS.primary}
               />
-              <Text style={styles.tagText}>{getGenderLabel(item.gender)}</Text>
+              <Text style={[styles.tagText,
+                item.gender === "FEMALE" && { color: COLORS.error }]}>
+                {getGenderLabel(item.gender)}
+              </Text>
             </View>
             <Text style={styles.tagDivider}>·</Text>
+            <Ionicons name="time-outline" size={11} color={COLORS.text.tertiary} />
             <Text style={styles.tagText}>{item.postedAt}</Text>
+            <Text style={styles.tagDivider}>·</Text>
+            <Ionicons name="eye-outline" size={11} color={COLORS.text.tertiary} />
+            <Text style={styles.tagText}>조회 {Math.floor(Math.random() * 200 + 10)}</Text>
           </View>
 
           {/* 가격 */}
@@ -369,8 +392,19 @@ function HomeScreen({ navigation }: any) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* 헤더 */}
+        {/* 헤더 — 직방 스타일 네이비 앱바 */}
         <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <View style={styles.headerLogo}>
+              <View style={styles.headerLogoIcon}>
+                <Ionicons name="home" size={14} color="#FFF" />
+              </View>
+              <Text style={styles.headerLogoText}>UniHouse</Text>
+            </View>
+            <TouchableOpacity style={styles.headerNotifBtn}>
+              <Ionicons name="notifications-outline" size={22} color="#FFF" />
+            </TouchableOpacity>
+          </View>
           <Text style={styles.headerTitle}>룸메이트 찾기</Text>
           <Text style={styles.headerSubtitle}>
             나에게 딱 맞는 룸메를 찾아보세요
@@ -772,20 +806,41 @@ function MyPageScreen({ user, onLogout }: { user: User; onLogout: () => void }) 
           <Text style={styles.headerTitle}>내 정보</Text>
         </View>
 
-        {/* 프로필 카드 */}
+        {/* 프로필 카드 — 직방 스타일 */}
         <View style={styles.profileCard}>
           <View style={styles.profileAvatar}>
-            <Ionicons name="person" size={32} color={COLORS.primary} />
+            <Ionicons name="person" size={32} color="#FFF" />
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>
               {user.email || "사용자"}
             </Text>
             <Text style={styles.profileProvider}>
-              {user.provider === "google" && "Google 계정"}
-              {user.provider === "kakao" && "카카오 계정"}
-              {user.provider === "email" && "이메일 계정"}
+              {user.provider === "google" && "🔵 Google 계정"}
+              {user.provider === "kakao" && "🟡 카카오 계정"}
+              {user.provider === "email" && "📧 이메일 계정"}
             </Text>
+          </View>
+          <View style={styles.profileBadge}>
+            <Text style={styles.profileBadgeText}>일반</Text>
+          </View>
+        </View>
+
+        {/* 활동 통계 — 직방 스타일 */}
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={styles.statNum}>2</Text>
+            <Text style={styles.statLabel}>찜한 매물</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNum}>0</Text>
+            <Text style={styles.statLabel}>내가 쓴 글</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNum}>0</Text>
+            <Text style={styles.statLabel}>채팅</Text>
           </View>
         </View>
 
@@ -1150,39 +1205,75 @@ const styles = StyleSheet.create({
     color: "#374151",
   },
 
-  // 헤더
+  // 헤더 — 직방 다크 네이비 앱바
   header: {
+    backgroundColor: COLORS.navy,
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
+    paddingTop: 16,
+    paddingBottom: 20,
+  },
+  headerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  headerLogo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  headerLogoIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 7,
+    backgroundColor: COLORS.primary,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerLogoText: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: "#FFFFFF",
+    letterSpacing: -0.3,
+  },
+  headerNotifBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: COLORS.text.primary,
+    fontSize: 26,
+    fontWeight: "900",
+    color: "#FFFFFF",
     marginBottom: 4,
+    letterSpacing: -0.5,
   },
   headerSubtitle: {
-    fontSize: 15,
-    color: COLORS.text.secondary,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.6)",
   },
 
-  // 검색
+  // 검색 — 직방 스타일 (헤더와 연속)
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: COLORS.cardBg,
-    marginHorizontal: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    marginHorizontal: 16,
+    marginTop: -14,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   searchIcon: {
     marginRight: 8,
@@ -1228,19 +1319,22 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.border,
     marginHorizontal: 4,
   },
+  // 정렬 버튼 — 디시인사이드 스타일 (주황 강조)
   sortBtn: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: COLORS.primaryLight,
-    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: COLORS.accentLight,
+    borderWidth: 1,
+    borderColor: COLORS.accent + "44",
+    gap: 5,
   },
   sortBtnText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.primary,
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.accent,
   },
 
   // 결과
@@ -1263,24 +1357,56 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
 
-  // 매물 카드
+  // 매물 카드 — 직방 스타일
   listingCard: {
     backgroundColor: COLORS.cardBg,
-    borderRadius: 20,
-    marginBottom: 16,
+    borderRadius: 14,
+    marginBottom: 12,
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: COLORS.border,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
+  // 직방 이미지 그라데이션 플레이스홀더
   cardImagePlaceholder: {
     width: "100%",
-    height: 180,
-    backgroundColor: COLORS.background,
+    height: 160,
+    backgroundColor: COLORS.navy,
     justifyContent: "center",
     alignItems: "center",
+  },
+  // 디시인사이드 HOT 뱃지
+  hotBadge: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    backgroundColor: COLORS.hot,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  hotBadgeText: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: "#FFF",
+  },
+  newBadge: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    backgroundColor: COLORS.success,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  newBadgeText: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: "#FFF",
   },
   bookmarkBtn: {
     position: "absolute",
@@ -1310,16 +1436,18 @@ const styles = StyleSheet.create({
   campusBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    gap: 4,
+    backgroundColor: COLORS.accentLight,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 3,
+    borderWidth: 1,
+    borderColor: COLORS.accent + "33",
   },
   campusBadgeText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: COLORS.primary,
+    fontSize: 11,
+    fontWeight: "800",
+    color: COLORS.accent,
   },
   distanceBadge: {
     flexDirection: "row",
@@ -1331,50 +1459,66 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
   },
   cardTitle: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: "700",
     color: COLORS.text.primary,
-    marginBottom: 10,
-    lineHeight: 24,
+    marginBottom: 8,
+    lineHeight: 22,
   },
+  // 디시인사이드 스타일 메타 정보 행
   tags: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
-    gap: 6,
+    marginBottom: 10,
+    gap: 4,
+    flexWrap: "wrap",
   },
   tag: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 3,
+  },
+  // 성별 태그 — 직방 스타일 필터 칩
+  genderTag: {
+    backgroundColor: COLORS.primaryLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  genderTagFemale: {
+    backgroundColor: "#FEE2E2",
   },
   tagText: {
-    fontSize: 13,
+    fontSize: 11,
     color: COLORS.text.secondary,
   },
   tagDivider: {
     color: COLORS.text.tertiary,
+    fontSize: 11,
   },
+  // 가격 — 직방 강조 스타일
   priceContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 12,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
   },
   priceLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.text.secondary,
+    fontWeight: "600",
   },
   price: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: COLORS.text.primary,
+    fontSize: 18,
+    fontWeight: "900",
+    color: COLORS.primary,
   },
   priceUnit: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.primary,
   },
 
   // Empty State
@@ -1401,8 +1545,8 @@ const styles = StyleSheet.create({
   },
   detailImagePlaceholder: {
     width: "100%",
-    height: 300,
-    backgroundColor: COLORS.background,
+    height: 280,
+    backgroundColor: COLORS.navy,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1455,10 +1599,20 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   priceCard: {
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: COLORS.navy,
+    borderRadius: 14,
+    padding: 18,
     marginBottom: 24,
+  },
+  priceCardLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.6)",
+  },
+  priceCardValue: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: "#FFFFFF",
   },
   priceRow: {
     flexDirection: "row",
@@ -1470,16 +1624,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     opacity: 0.2,
     marginVertical: 12,
-  },
-  priceCardLabel: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: COLORS.primary,
-  },
-  priceCardValue: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: COLORS.primary,
   },
   infoSection: {
     marginBottom: 24,
@@ -1603,9 +1747,9 @@ const styles = StyleSheet.create({
   ctaPrimary: {
     flex: 1,
     flexDirection: "row",
-    height: 56,
+    height: 52,
     backgroundColor: COLORS.primary,
-    borderRadius: 16,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     gap: 8,
@@ -1640,49 +1784,88 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
   },
 
-  // 마이페이지
+  // 마이페이지 — 직방 스타일
   profileCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.cardBg,
-    marginHorizontal: 20,
+    backgroundColor: COLORS.navy,
+    marginHorizontal: 16,
     padding: 20,
-    borderRadius: 20,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderRadius: 16,
+    marginBottom: 12,
   },
   profileAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: COLORS.primaryLight,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.primary,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 16,
+    marginRight: 14,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.3)",
   },
   profileInfo: {
     flex: 1,
   },
   profileName: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: COLORS.text.primary,
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#FFFFFF",
     marginBottom: 4,
   },
   profileProvider: {
-    fontSize: 14,
+    fontSize: 12,
+    color: "rgba(255,255,255,0.6)",
+  },
+  profileBadge: {
+    marginLeft: "auto",
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  profileBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#FFF",
+  },
+  // 활동 통계 행 — 직방 스타일
+  statsRow: {
+    flexDirection: "row",
+    backgroundColor: COLORS.cardBg,
+    marginHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: "hidden",
+  },
+  statItem: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 16,
+  },
+  statNum: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: COLORS.primary,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 11,
     color: COLORS.text.secondary,
+    fontWeight: "600",
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: 12,
   },
   menuSection: {
     backgroundColor: COLORS.cardBg,
-    marginHorizontal: 20,
-    borderRadius: 16,
+    marginHorizontal: 16,
+    borderRadius: 12,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -1727,13 +1910,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginHorizontal: 20,
-    marginTop: 24,
-    padding: 18,
-    borderRadius: 16,
-    backgroundColor: COLORS.cardBg,
+    marginHorizontal: 16,
+    marginTop: 20,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: "#FFF1F0",
     borderWidth: 1,
-    borderColor: COLORS.error,
+    borderColor: COLORS.error + "44",
     gap: 8,
   },
   logoutBtnText: {
